@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import feature_visualization.visualization as plot
 
 if __name__=='__main__':
-    print('a')
     # mice_data_dir = r'C:\Users\marce\OneDrive - ETHZ\Education\ETH\Spring 2020\Statslab\Project_Neuroscience\dataset'
     # md = mice_data.MiceDataMerger(mice_data_dir)
     # # feature_data = featureDataPreparation(md, chunk_duration=10, signal_type='brain_signal')
