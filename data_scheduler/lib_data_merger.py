@@ -164,24 +164,28 @@ class MiceDataMerger(DataMerger):
             if res is None or res.group(1) is None:
                 continue
 
-            mouse_data_id = (int(res.group(1)), res.group(2), res.group(3).lower())
+            try:
+                mouse_data_id = (int(res.group(1)), res.group(2).lower(), res.group(3).lower())
+            except ValueError | AttributeError as err:
+                raise ValueError('File {0} is of wrong name format'.format(file))
+
             if mouse_data_id[0] is None or mouse_data_id[1] is None or mouse_data_id[2] is None\
                     or mouse_data_id[1] not in MiceDataMerger.treatments or mouse_data_id[2] not in MiceDataMerger.signals:
                 raise ValueError('File {0} is of wrong name format'.format(file))
             if mouse_data_id in self.mouse_data_file_map:
                 raise ValueError('There are two files in directory {0} that correspond to same mouse measurement identificator {1}'.format(self.dir, mouse_data_id))
 
-            self.mouse_data_file_map[mouse_data_id]=os.path.join(self.dir, file)
+            self.mouse_data_file_map[mouse_data_id] = os.path.join(self.dir, file)
 
     def merge_data(self):
         pass
 
     def fetch_mouse_signal(self, mouse_id, treat, signal):
-        if mouse_id is None or treat is None or treat not in MiceDataMerger.treatments \
+        if mouse_id is None or treat is None or treat.lower() not in MiceDataMerger.treatments \
                 or signal is None or signal.lower() not in MiceDataMerger.signals:
-            raise ValueError('Invalid (mouse ID, treatment, signal) combination: ({0}, {1}, {2})'.format(mouse_id, treat, signal.lower()))
+            raise ValueError('Invalid (mouse ID, treatment, signal) combination: ({0}, {1}, {2})'.format(mouse_id, treat.lower(), signal.lower()))
 
-        signal = signal.lower()
+        treat, signal = treat.lower(), signal.lower()
         mouse_signal_file_id = (mouse_id, treat, signal)
         if mouse_signal_file_id not in self.mouse_data_file_map:
             raise ValueError('Invalid (mouse ID, treatment, signal) combination: ({0}, {1}, {2})'.format(mouse_id, treat, signal))
@@ -215,7 +219,7 @@ class MiceDataMerger(DataMerger):
                 data[mice][treatment] = {}
                 for signal in signals:
                     try:
-                        data[mice][treatment][signal] = self.fetch_mouse_signal(mice, treatment, signal)
+                        data[mice][treatment][signal] = self.fetch_mouse_signal(mice, treatment.lower(), signal.lower())
                     except ValueError:
                         pass
 
