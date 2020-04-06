@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import re
-
+import numpy as np
 
 class DataFrame:
 
@@ -131,28 +131,27 @@ class DataMerger:
 class MiceDataMerger(DataMerger):
 
     treatments = set(['glu', 'eth', 'sal', 'nea'])
-    signals = set(['brain_signal', 'running', 'V_O2', 'V_CO2', 'RQ', 'Heat'])
+    signals = set(['brain_signal', 'running', 'v_o2', 'v_co2', 'rq', 'heat'])
 
     data_freq = {
         'brain_signal': 10,
         'running': 10,
-        'V_O2': 1,
-        'V_CO2': 1,
-        'RQ': 1,
-        'Heat': 1
+        'v_o2': 1,
+        'v_co2': 1,
+        'rq': 1,
+        'heat': 1
     }
 
     col_names = {
         'brain_signal': ['time_min', 'neu_act_1', 'neu_act_2'],
         'running': ['time_min', 'run_cm_s'],
-        'V_O2': ['time_min', 'lit_min'],
-        'V_CO2': ['time_min', 'lit_min'],
-        'RQ': ['time_min', 'exc'],
-        'Heat': ['time_min', 'cal_min']
+        'v_o2': ['time_min', 'lit_min'],
+        'v_co2': ['time_min', 'lit_min'],
+        'rq': ['time_min', 'exc'],
+        'heat': ['time_min', 'cal_min']
     }
 
-    #file_regex = r'([0-9]+)-(glu|eth|nea|sal)-IG-[0-9]+_(Brain_signal|Heat|RQ|Running|V_CO2|V_O2).csv'
-    file_regex = r'([0-9]+)-(glu|eth|nea|sal)-IG-[0-9]+_(Brain_signal|Running).csv'
+    file_regex = r'([0-9]+)-(glu|eth|nea|sal)-IG-[0-9]+_(Brain_signal|Heat|RQ|Running|V_CO2|V_O2).csv'
 
     def __init__(self, dir):
         super().__init__(dir)
@@ -189,13 +188,55 @@ class MiceDataMerger(DataMerger):
 
         return DataFrame(pd.read_csv(self.mouse_data_file_map[mouse_signal_file_id], names=MiceDataMerger.col_names[signal]), signal)
 
-    def fetch_mouse_data(self, mouse_id, treat, signals):
-        if mouse_id is None or treat is None \
-                or treat not in MiceDataMerger.treatments \
-                or signals is None or len(signals) <= 0:
-            return None
+    def fetch_mouse_data(self, mice_id, treatments = treatments, signals = signals):
 
-        return self.load_mouse_signal(mouse_id, treat, signals[0])
+        def check_array_or_single_value(val, parameter_name, value_constraints = None):
+            if val is None:
+                raise ValueError('{0} can not be None value'.format(parameter_name))
+            elif isinstance(val, (list, set, np.ndarray)) and len(val) <= 0:
+                raise ValueError('{0} array can not be empty'.format(parameter_name))
+
+            val = val if isinstance(val, (list, set, np.ndarray)) else [val]
+            if value_constraints is not None:
+                for v in val:
+                    if v not in value_constraints:
+                        raise ValueError('{0} is not legal value for {1}'.format(v, parameter_name))
+
+            return val
+
+        mice_id = check_array_or_single_value(mice_id, 'Mouse ID')
+        treatments = check_array_or_single_value(treatments, 'Mouse treatment', MiceDataMerger.treatments)
+        signals = check_array_or_single_value(signals, 'Mouse data signal', MiceDataMerger.signals)
+
+        data = {}
+        for mice in mice_id:
+            data[mice]={}
+            for treatment in treatments:
+                data[mice][treatment] = {}
+                for signal in signals:
+                    try:
+                        data[mice][treatment][signal] = self.fetch_mouse_signal(mice, treatment, signal)
+                    except ValueError:
+                        pass
+
+        for mice in mice_id:
+            for treatment in treatments:
+                if len(list(data[mice][treatment])) == 1:
+                    data[mice][treatment] = data[mice][treatment][list(data[mice][treatment])[0]]
+                elif len(list(data[mice][treatment])) == 0:
+                    data[mice].pop(treatment, None)
+
+            if len(list(data[mice])) == 1:
+                data[mice] = data[mice][list(data[mice])[0]]
+            elif len(list(data[mice])) == 0:
+                data.pop(mice, self)
+
+        if len(list(data)) == 1:
+            data = data[list(data)[0]]
+        elif len(data) == 0:
+            raise ValueError('There was no data succesfully loaded')
+
+        return data
 
     def get_data(self, **kwargs):
         """
