@@ -16,30 +16,25 @@ class LinearClassifier:
 
         if features.selection_type == 'relevant':
             if model_type == 'logistic':
-                self.model = linear_model.LogisticRegression(penalty='none', max_iter=1000)
+                self.model = linear_model.LogisticRegression(penalty='none', max_iter = 1000)
         else:
             if model_type == 'logistic':
-                self.model = linear_model.LogisticRegression(penalty='l2', solver = 'saga', max_iter=1000)
-
-        #treat_count = features.iloc[:,-1].value_counts()
-        #pd.set_option('display.max_rows', features.shape[0] + 1)
-        #print(features.sort_values(by = ['id']))
-        #if len(set(treat_count)) > 1:
-        #    features = features.iloc[:4*min(treat_count)]
+                self.model = linear_model.LogisticRegression(penalty='l2', solver = 'saga', max_iter=10000)
         self.feature_block = features
-        #pd.set_option('display.max_rows', features.shape[0] + 1)
-        #print(features)
 
-    def classify(self):
-        X = self.feature_block.iloc[:,1:len(self.feature_block.columns)-1]
+
+    def classify(self, train_test):
+        X = self.feature_block.iloc[:,0:len(self.feature_block.columns)-1]
         y = self.feature_block.iloc[:, -1]
-        stratifier = [i[-7:] for i in self.feature_block.index]
-        print(set(stratifier))
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, stratify = stratifier)
-        Xtest_stratifier = [i[-7:] for i in X_test.index]
-        Xtrain_stratifier = [i[-7:] for i in X_train.index]
-        print(Counter(Xtest_stratifier))
-        print(Counter(Xtrain_stratifier))
+        if train_test['split_type'] == 'ratio':
+            stratifier = [i[-7:] for i in self.feature_block.index]
+            test_ratio = train_test['test']
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = test_ratio, stratify = stratifier)
+        else:
+            subjects = train_test['train']
+            train_index = [any(str(subject) in i for subject in subjects) for i in self.feature_block.index]
+            test_index = [not i for i in train_index]
+            X_train, X_test, y_train, y_test = X.loc[train_index], X.loc[test_index], y.loc[train_index], y.loc[test_index]
         X_train = scale(X_train)
         X_test = scale(X_test)
         self.fit = self.model.fit(X_train, y_train)

@@ -23,13 +23,15 @@ if __name__=='__main__':
     }
     feature_generator = feature_generator.FeatureExtractor(fc_parameters, md, 'running', brain_half='right',
                                                            mouse_ids={165, 166}, slice_min=30, target="group",
-                                                           part_last=10, equal_length= True)
+                                                           part_last=25, equal_length= True)
     relevant_features = feature_generator.relevantFeatures()
     #extracted_features = feature_generator.getFeatures(target_class= True)
     pandas.set_option('display.max_rows', relevant_features.shape[0] + 1)
-    #print(relevant_features)
+    print(relevant_features)
     #print(extracted_features)
     #print(extracted_features.columns)
     #classifier = LC.LinearClassifier(extracted_features)
     classifier = LC.LinearClassifier(relevant_features)
-    classifier.classify()
+    classifier.classify(train_test = {'split_type': 'subject', 'train': [165], 'test' : [166]}) # splittype either
+                                                            # 'subject' or 'ratio' with percentages of whole data
+    classifier.classify(train_test={'split_type': 'ratio', 'train': 0.7, 'test': 0.3})
