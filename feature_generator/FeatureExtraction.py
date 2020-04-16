@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import itertools as iter
 from tsfresh import extract_relevant_features, extract_features
+from tsfresh.feature_selection.selection import select_features
+from tsfresh.feature_extraction.settings import from_columns
 #these are the different settings for the functions
 #from tsfresh.feature_extraction import EfficientFCParameters, MinimalFCParameters, ComprehensiveFCParameters
 
@@ -38,6 +40,18 @@ class FeatureExtractor:
         if target_class:
             extracted_features['target_class'] = self.y
         return extracted_features
+
+    def getFeatures2(self, target_class = False):
+        extracted_features = extract_features(self.collected_data, column_id='id', column_sort='time_min',
+                         column_value= self.column_value,
+                         default_fc_parameters= self.fc_parameters)
+        extracted_features.selection_type = 'all'
+        if target_class:
+            extracted_features['target_class'] = self.y
+        X_filtered = select_features(extracted_features, self.y, ml_task = 'classification')
+        kind_to_fc_parameters = from_columns(X_filtered)
+        return kind_to_fc_parameters
+
 
     def relevantFeatures(self):
         features_filtered_direct = extract_relevant_features(self.collected_data, y = self.y, column_id='id', column_sort='time_min',
