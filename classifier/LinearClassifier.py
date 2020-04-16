@@ -19,7 +19,7 @@ class LinearClassifier:
                 self.model = linear_model.LogisticRegression(penalty='none', max_iter = 1000)
         else:
             if model_type == 'logistic':
-                self.model = linear_model.LogisticRegression(penalty='l2', solver = 'saga', max_iter=10000)
+                self.model = linear_model.LogisticRegression(penalty= penalty, solver = 'saga', max_iter=10000)
         self.feature_block = features
 
 
