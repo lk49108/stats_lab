@@ -22,7 +22,7 @@ class FeatureExtractor:
         self.signal_type = signal_type
         self.mouse_ids = mouse_ids
         self.chunk_duration = part_last
-        self.data_preparation(signal_type, mouse_ids, slice_min, target, part_last, equal_length)
+        self.data_preparation(signal_type, slice_min, target, part_last, equal_length)
         if signal_type == 'brain_signal' and brain_half == 'right':
             column_value = self.mouse_data.col_names[self.signal_type][2]
         elif signal_type == 'brain_signal' and brain_half == 'both':
@@ -56,13 +56,17 @@ class FeatureExtractor:
     def relevantFeatures(self):
         features_filtered_direct = extract_relevant_features(self.collected_data, y = self.y, column_id='id', column_sort='time_min',
                                                              column_value= self.column_value, default_fc_parameters=self.fc_parameters)
-        features_filtered_direct["target_class"] = self.y
+        print('Identified ', len(features_filtered_direct.columns), ' relevant features.')
+        features_filtered_direct['target_class'] = self.y
         features_filtered_direct.selection_type = 'relevant'
         return features_filtered_direct
 
 
-    def data_preparation(self, signal_type, mouse_ids, slice_min, target, part_last, equal_length):
-        mouse_map = list(iter.product(mouse_ids, self.mouse_data.treatments))
+    def data_preparation(self, signal_type, slice_min, target, part_last, equal_length):
+        if target is not 'nea_vs_all' and target is not 'all_vs_all':
+            raise ValueError('The target argument must be either nea_vs_all or all_vs_all')
+
+        mouse_map = list(iter.product(self.mouse_ids, self.mouse_data.treatments))
         target_map = []
         target_y = []
         chuncks = []
@@ -70,19 +74,14 @@ class FeatureExtractor:
 
         for j in mouse_map:
             data_gen = self.mouse_data.fetch_mouse_signal(j[0], j[1], signal_type)
+            if data_gen == None:
+                continue
             data = data_gen.sliced_data(slice_min=slice_min)
             previous_chunk_length = len(chuncks)
             chuncks = data.partition_data(part_last=part_last)
-            if equal_length:
-                if j[1] == 'nea':
-                    length = previous_chunk_length - length_subtractor
-                else:
-                    length = len(chuncks)
-            else:
-                length = len(chuncks)+1
 
             chunck_itterator = 0
-            for chunck in chuncks[0:length-1]:
+            for chunck in chuncks:
                 chunck = chunck.get_pandas(time=True)
 
                 # sometimes chuncks have length 0 and we need to skip those chuncks
@@ -102,7 +101,8 @@ class FeatureExtractor:
 
         # hand to target y the class we want to predict, should not contain sample ids
         self.y = pd.Series(index=target_map, data=target_y)
+
         # classify treatment or no treatment
         # if false all types of treatments are considered
-        if target == 'treatment':
+        if target == 'nea_vs_all':
             self.y[self.y.values != 'nea'] = 'treat'

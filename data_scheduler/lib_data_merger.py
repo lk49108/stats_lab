@@ -37,7 +37,8 @@ class DataFrame:
             raise ValueError('{0} as a minute for data to be sliced at is illegal argument'.format(slice_min))
 
         data = self.df[self.df["time_min"] >= slice_min]
-
+        #nea has a default length of 153 mins, cutting nea signal to have same length as other signals  
+        data = data[data["time_min"] <= 110]
         new_chunks = []
         for chunk in self.chunks:
             if chunk[1] >= slice_min:
@@ -172,8 +173,8 @@ class MiceDataMerger(DataMerger):
             if mouse_data_id[0] is None or mouse_data_id[1] is None or mouse_data_id[2] is None\
                     or mouse_data_id[1] not in MiceDataMerger.treatments or mouse_data_id[2] not in MiceDataMerger.signals:
                 raise ValueError('File {0} is of wrong name format'.format(file))
-            if mouse_data_id in self.mouse_data_file_map:
-                raise ValueError('There are two files in directory {0} that correspond to same mouse measurement identificator {1}'.format(self.dir, mouse_data_id))
+            #if mouse_data_id in self.mouse_data_file_map:
+                #print('There are two files in directory {0} that correspond to same mouse measurement identificator {1}'.format(self.dir, mouse_data_id))
 
             self.mouse_data_file_map[mouse_data_id] = os.path.join(self.dir, file)
 
@@ -183,12 +184,14 @@ class MiceDataMerger(DataMerger):
     def fetch_mouse_signal(self, mouse_id, treat, signal):
         if mouse_id is None or treat is None or treat.lower() not in MiceDataMerger.treatments \
                 or signal is None or signal.lower() not in MiceDataMerger.signals:
-            raise ValueError('Invalid (mouse ID, treatment, signal) combination: ({0}, {1}, {2})'.format(mouse_id, treat.lower(), signal.lower()))
+            #print('Invalid (mouse ID, treatment, signal) combination: ({0}, {1}, {2})'.format(mouse_id, treat.lower(), signal.lower()))
+            return
 
         treat, signal = treat.lower(), signal.lower()
         mouse_signal_file_id = (mouse_id, treat, signal)
         if mouse_signal_file_id not in self.mouse_data_file_map:
-            raise ValueError('Invalid (mouse ID, treatment, signal) combination: ({0}, {1}, {2})'.format(mouse_id, treat, signal))
+            #print('Invalid (mouse ID, treatment, signal) combination: ({0}, {1}, {2})'.format(mouse_id, treat, signal))
+            return
 
         return DataFrame(pd.read_csv(self.mouse_data_file_map[mouse_signal_file_id], names=MiceDataMerger.col_names[signal]), signal)
 
