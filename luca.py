@@ -28,7 +28,8 @@ if __name__=='__main__':
     fc_parameters = EfficientFCParameters()
 
     #set target to treatment to check if we actually predict the nea vs all correctly
-    #skipping pid 168
+    #skipping id 168, they said its messed up data for the brain
+    #TODO check all mice for messed up data, maybe in R check all histograms.
     mice_ids = {126, 165, 166, 167, 170, 299, 302, 303, 306, 307, 323, 327}
     validation_mice = {165, 170, 307, 327}
     training_mice = {166, 170, 299, 306}
@@ -36,7 +37,7 @@ if __name__=='__main__':
     #target arguments: use 'nea_vs_all' or 'all_vs_all'
     #for few training mice set part_last to 10 mins, for all training mice, set part last to 20
     feature_generator = feature_generator.FeatureExtractor(fc_parameters, md, 'running', brain_half='right',
-                                                           mouse_ids=mice_ids, slice_min=30, target='all_vs_all',
+                                                           mouse_ids=mice_ids, slice_min=30, target='nea_vs_all',
                                                            part_last=20, equal_length= True)
     relevant_features = feature_generator.relevantFeatures()
     print(relevant_features)

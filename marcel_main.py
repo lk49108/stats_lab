@@ -26,7 +26,7 @@ if __name__=='__main__':
     #fc_parameters = ComprehensiveFCParameters()
     feature_generator = feature_generator.FeatureExtractor(fc_parameters, md, 'running', brain_half='right',
                                                            mouse_ids={165, 166}, slice_min=30, target="all_vs_all",
-                                                           part_last=10, equal_length= True)
+                                                           part_last=10)
     relevant_features = feature_generator.relevantFeatures()
     #extracted_features = feature_generator.getFeatures(target_class= True)
     pandas.set_option('display.max_rows', relevant_features.shape[0] + 1)
