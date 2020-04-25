@@ -4,6 +4,7 @@ from tsfresh.feature_extraction.settings import EfficientFCParameters, Comprehen
 import matplotlib.pyplot as plt
 import feature_visualization.visualization as plot
 import classifier.LinearClassifier as LC
+import feature_visualization.visualization as plot
 
 if __name__=='__main__':
     mice_data_dir = '/Users/lucadisse/ETH/Master/FS20/StatsLab/CSV data files for analysis'
@@ -38,18 +39,18 @@ if __name__=='__main__':
     #for few training mice set part_last to 10 mins, for all training mice, set part last to 20
     #TODO only to feature selection over the training data and remember the names
     #TODO read features from saved format
-    feature_generator = feature_generator.FeatureExtractor(own_fc_parameters, md, 'running', brain_half='right',
-                                                           mouse_ids=mice_ids, slice_min=30, target='nea_vs_all',
+
+    # as signal choose either the running or brain_signal
+    feature_generator = feature_generator.FeatureExtractor(own_fc_parameters, md, 'brain_signal', brain_half='right',
+                                                           mouse_ids=mice_ids, slice_min=30, target='all_vs_all',
                                                            part_last=20, equal_length= True)
 
-    # TODO
     relevant_features = feature_generator.relevantFeatures()
     #validation features
-    print(relevant_features)
+    print('Number of features selected: ', relevant_features)
 
 
-
-    classifier = LC.LinearClassifier(relevant_features, C_val = 50)
+    classifier = LC.LinearClassifier(relevant_features, C_val = 1)
     #classifier = LC.LinearClassifier(extracted_features)
     # splittype either 'subject' or 'ratio' with percentages of whole data
     classifier.classify(train_test={'split_type': 'subject', 'train': list(mice_ids-validation_mice), 'test' : list(validation_mice)})

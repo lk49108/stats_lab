@@ -37,8 +37,7 @@ class FeatureExtractor:
                          column_value= self.column_value,
                          default_fc_parameters= self.fc_parameters)
         extracted_features.selection_type = 'all'
-        if target_class:
-            extracted_features['target_class'] = self.y
+        extracted_features['target_class'] = self.y
         return extracted_features
 
     def getFeatures2(self, target_class = False):
@@ -70,34 +69,43 @@ class FeatureExtractor:
         target_map = []
         target_y = []
         chuncks = []
-        length_subtractor = 0
+        file_id = []
+        previous_ids = []
 
         for j in mouse_map:
             data_gen = self.mouse_data.fetch_mouse_signal(j[0], j[1], signal_type)
             if data_gen == None:
                 continue
             data = data_gen.sliced_data(slice_min=slice_min)
-            previous_chunk_length = len(chuncks)
+
             chuncks = data.partition_data(part_last=part_last)
 
             chunck_itterator = 0
+            file_itterator = 1
             for chunck in chuncks:
                 chunck = chunck.get_pandas(time=True)
 
                 # sometimes chuncks have length 0 and we need to skip those chuncks
                 if not len(chunck):
-                    length_subtractor = 1
                     continue
 
                 chunck_itterator = chunck_itterator + 1
-                # id contains chunckid-mouseid_treatmentclass
-                id = np.repeat(str(chunck_itterator) + '-' + str(j[0]) + '_' + str(j[1]), len(chunck))
+                current_id = str(chunck_itterator) + '-' + str(j[0]) + '_' + str(j[1])
+
+                # if multiple files produce the same id then we need to distingiush them by the file id
+                if current_id in previous_ids:
+                    print('now here---------')
+                    file_itterator = file_itterator + 1
+
+                # id contains fileid-chunckid-mouseid_treatmentclass
+                id = np.repeat(str(file_itterator) + '-' + current_id, len(chunck))
                 chunck.insert(0, 'id', id, True)
 
                 # all stacked in rows
                 self.collected_data = pd.concat([self.collected_data, chunck], axis=0)
                 target_map.append(id[1])
                 target_y.append(str(j[1]))
+                previous_ids.append(current_id)
 
         # hand to target y the class we want to predict, should not contain sample ids
         self.y = pd.Series(index=target_map, data=target_y)
