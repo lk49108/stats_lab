@@ -70,7 +70,7 @@ class LinearClassifier:
         plt.show()
 
         #check if we do binary classification or multilabel
-        if y_out_confidence.shape[1] is 1:
+        if len(y_out_confidence.shape) is 1:
             out_df = pd.DataFrame({'real_y': y_test, 'predicted_y': y_out, 'predicted_y_confidence': y_out_confidence})
             acc_score, auc_score = self.accuracy(out_df)
             print(out_df)

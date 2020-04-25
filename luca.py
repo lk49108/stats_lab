@@ -36,10 +36,15 @@ if __name__=='__main__':
 
     #target arguments: use 'nea_vs_all' or 'all_vs_all'
     #for few training mice set part_last to 10 mins, for all training mice, set part last to 20
-    feature_generator = feature_generator.FeatureExtractor(fc_parameters, md, 'running', brain_half='right',
+    #TODO only to feature selection over the training data and remember the names
+    #TODO read features from saved format
+    feature_generator = feature_generator.FeatureExtractor(own_fc_parameters, md, 'running', brain_half='right',
                                                            mouse_ids=mice_ids, slice_min=30, target='nea_vs_all',
                                                            part_last=20, equal_length= True)
+
+    # TODO
     relevant_features = feature_generator.relevantFeatures()
+    #validation features
     print(relevant_features)
 
 
