@@ -10,6 +10,13 @@ if __name__ == '__main__':
     m_167 = md.fetch_mouse_data(167)
     print(list(m_167))
 
+    print('#####################')
+    dt = m_167['eth']['rq']
+    print(dt)
+    arr = dt.partition_data(part_last=5, overlap=True, overlap_ratio=0.5, remove_shorter=True)
+    print(arr)
+    print('#####################')
+
     mice_data = md.fetch_mouse_data([167, 2934, 165])
     print(list(mice_data))
     print(mice_data)

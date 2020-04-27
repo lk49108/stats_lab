@@ -114,7 +114,7 @@ class DataFrame:
 
         return df
 
-    def partition_data(self, part_last, overlap=True, overlap_ratio=0.2, remove_shorter = False):
+    def partition_data(self, part_last, overlap=True, overlap_ratio=0.2, remove_shorter = True):
         if part_last is None or part_last <=0:
             raise ValueError('{0} as partition lasting time is not legal value'.format(part_last))
         if remove_shorter is None:
@@ -123,7 +123,7 @@ class DataFrame:
             raise ValueError('Can not partition data frame by time because there is no time column in it')
         if overlap is None:
             raise ValueError('Can not partition data frame by time because there is no time column in it')
-        if overlap and (overlap_ratio is None or overlap >= 1):
+        if overlap and (overlap_ratio is None or overlap_ratio >= 1):
             raise ValueError('Overlapping is used and therefore "overlap_ratio" argument has to be provided and be less than 1')
 
         diff = part_last * (1 - overlap_ratio) if overlap else part_last
@@ -142,7 +142,10 @@ class DataFrame:
         return chunked_data
 
     def __str__(self):
-        return self.signal_type
+        s = self.signal_type + ' '
+        for chunk in self.chunks:
+            s += str(chunk) + ', '
+        return s[:-2]
 
     def __repr__(self):
         s = self.signal_type + ' '
