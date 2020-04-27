@@ -46,6 +46,30 @@ class DataFrame:
 
         return DataFrame(data, self.signal_type, chunks=new_chunks)
 
+    def right_slice(self, slice_min):
+        if slice_min is None:
+            raise ValueError('{0} as a minute for data to be sliced at is illegal argument'.format(slice_min))
+
+        data = self.df[self.df["time_min"] >= slice_min]
+        new_chunks = []
+        for chunk in self.chunks:
+            if chunk[1] >= slice_min:
+                new_chunks.append((max(chunk[0], slice_min), chunk[1]))
+
+        return DataFrame(data, self.signal_type, chunks=new_chunks)
+
+    def left_slice(self, slice_min):
+        if slice_min is None:
+            raise ValueError('{0} as a minute for data to be sliced at is illegal argument'.format(slice_min))
+
+        data = self.df[self.df["time_min"] <= slice_min]
+        new_chunks = []
+        for chunk in self.chunks:
+            if chunk[0] <= slice_min:
+                new_chunks.append((chunk[0], min(chunk[1], slice_min)))
+
+        return DataFrame(data, self.signal_type, chunks=new_chunks)
+
     def leave_out_chunk(self, time_tuple):
         if time_tuple is None:
             raise ValueError('Leave out chunk is not supposed to be None value')
@@ -90,14 +114,19 @@ class DataFrame:
 
         return df
 
-    def partition_data(self, part_last, remove_shorter = False):
+    def partition_data(self, part_last, overlap=True, overlap_ratio=0.2, remove_shorter = True):
         if part_last is None or part_last <=0:
             raise ValueError('{0} as partition lasting time is not legal value'.format(part_last))
         if remove_shorter is None:
             raise ValueError('remove_shorter argument is not allowed to be of value None')
         if 'time_min' not in list(self.df):
             raise ValueError('Can not partition data frame by time because there is no time column in it')
+        if overlap is None:
+            raise ValueError('Can not partition data frame by time because there is no time column in it')
+        if overlap and (overlap_ratio is None or overlap_ratio >= 1):
+            raise ValueError('Overlapping is used and therefore "overlap_ratio" argument has to be provided and be less than 1')
 
+        diff = part_last * (1 - overlap_ratio) if overlap else part_last
         chunked_data = []
         for chunk in self.chunks:
             start, end = chunk
@@ -105,12 +134,24 @@ class DataFrame:
             s = start
             while s+part_last <= end:
                 chunked_data.append(DataFrame(self.df[(self.df['time_min'] >= s) & (self.df['time_min'] < s+part_last)], self.signal_type, [(s, s+part_last)]))
-                s += part_last
+                s += diff
 
             if not remove_shorter:
                 chunked_data.append(DataFrame(self.df[(self.df['time_min'] >= s) & (self.df['time_min'] < end)], self.signal_type, [(s, end)]))
 
         return chunked_data
+
+    def __str__(self):
+        s = self.signal_type + ' '
+        for chunk in self.chunks:
+            s += str(chunk) + ', '
+        return s[:-2]
+
+    def __repr__(self):
+        s = self.signal_type + ' '
+        for chunk in self.chunks:
+            s += str(chunk) + ', '
+        return s[:-2]
 
 class DataMerger:
 
@@ -152,7 +193,7 @@ class MiceDataMerger(DataMerger):
         'heat': ['time_min', 'cal_min']
     }
 
-    file_regex = r'([0-9]+)-(glu|eth|nea|sal)-IG-[0-9]+_(Brain_signal|Heat|RQ|Running|V_CO2|V_O2).csv'
+    file_regex = r'([0-9]+)-(glu|eth|nea|sal)-ig-[0-9]+_(brain_signal|heat|rq|running|v_vo2|v_o2).csv'
 
     def __init__(self, dir):
         super().__init__(dir)
@@ -161,22 +202,24 @@ class MiceDataMerger(DataMerger):
 
     def preprocess_dir(self):
         for file in os.listdir(self.dir):
-            res = re.match(MiceDataMerger.file_regex, file)
+            file_lower=file.lower()
+            res = re.match(MiceDataMerger.file_regex, file_lower)
             if res is None or res.group(1) is None:
                 continue
 
             try:
-                mouse_data_id = (int(res.group(1)), res.group(2).lower(), res.group(3).lower())
+                mouse_data_id = (int(res.group(1)), res.group(2), res.group(3))
             except ValueError | AttributeError as err:
                 raise ValueError('File {0} is of wrong name format'.format(file))
 
             if mouse_data_id[0] is None or mouse_data_id[1] is None or mouse_data_id[2] is None\
                     or mouse_data_id[1] not in MiceDataMerger.treatments or mouse_data_id[2] not in MiceDataMerger.signals:
                 raise ValueError('File {0} is of wrong name format'.format(file))
-            #if mouse_data_id in self.mouse_data_file_map:
-                #print('There are two files in directory {0} that correspond to same mouse measurement identificator {1}'.format(self.dir, mouse_data_id))
 
-            self.mouse_data_file_map[mouse_data_id] = os.path.join(self.dir, file)
+            if mouse_data_id in self.mouse_data_file_map:
+                self.mouse_data_file_map[mouse_data_id].append(os.path.join(self.dir, file))
+            else:
+                self.mouse_data_file_map[mouse_data_id] = [(os.path.join(self.dir, file))]
 
     def merge_data(self):
         pass
@@ -184,16 +227,18 @@ class MiceDataMerger(DataMerger):
     def fetch_mouse_signal(self, mouse_id, treat, signal):
         if mouse_id is None or treat is None or treat.lower() not in MiceDataMerger.treatments \
                 or signal is None or signal.lower() not in MiceDataMerger.signals:
-            #print('Invalid (mouse ID, treatment, signal) combination: ({0}, {1}, {2})'.format(mouse_id, treat.lower(), signal.lower()))
-            return
+            return None
 
         treat, signal = treat.lower(), signal.lower()
         mouse_signal_file_id = (mouse_id, treat, signal)
         if mouse_signal_file_id not in self.mouse_data_file_map:
-            #print('Invalid (mouse ID, treatment, signal) combination: ({0}, {1}, {2})'.format(mouse_id, treat, signal))
-            return
+            return None
 
-        return DataFrame(pd.read_csv(self.mouse_data_file_map[mouse_signal_file_id], names=MiceDataMerger.col_names[signal]), signal)
+        data = [DataFrame(pd.read_csv(file, names=MiceDataMerger.col_names[signal]), signal) for file in self.mouse_data_file_map[mouse_signal_file_id]]
+        if len(data)<=1:
+            return data[0]
+
+        return data
 
     def fetch_mouse_data(self, mice_id, treatments = treatments, signals = signals):
 
@@ -204,7 +249,7 @@ class MiceDataMerger(DataMerger):
                 raise ValueError('{0} array can not be empty'.format(parameter_name))
 
             val = val if isinstance(val, (list, set, np.ndarray)) else [val]
-            if value_constraints is not None:
+            if value_constraints:
                 for v in val:
                     if v not in value_constraints:
                         raise ValueError('{0} is not legal value for {1}'.format(v, parameter_name))
@@ -222,7 +267,9 @@ class MiceDataMerger(DataMerger):
                 data[mice][treatment] = {}
                 for signal in signals:
                     try:
-                        data[mice][treatment][signal] = self.fetch_mouse_signal(mice, treatment.lower(), signal.lower())
+                        dt = self.fetch_mouse_signal(mice, treatment.lower(), signal.lower())
+                        if dt:
+                            data[mice][treatment][signal] = dt
                     except ValueError:
                         pass
 
