@@ -1,11 +1,13 @@
 from sklearn import linear_model
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
+from sklearn.model_selection import StratifiedKFold, train_test_split, StratifiedShuffleSplit
 from sklearn.preprocessing import scale
-from sklearn.metrics import balanced_accuracy_score, plot_confusion_matrix, roc_auc_score, roc_curve
+from sklearn.metrics import confusion_matrix, balanced_accuracy_score, plot_confusion_matrix, roc_auc_score, roc_curve
 import matplotlib.pyplot as plt
 from sklearn.utils.class_weight import compute_sample_weight
+from sklearn import preprocessing
+from sklearn.svm import SVC
 import os
 from collections import Counter
 
@@ -22,6 +24,7 @@ class LinearClassifier:
         if model_type == 'logistic':
             self.model = linear_model.LogisticRegression(penalty= penalty, solver = 'saga', max_iter=10000, C=C_val)
 
+        self.model=SVC(gamma='auto')
         self.feature_block = features
 
 
@@ -43,8 +46,9 @@ class LinearClassifier:
 
             X_train, X_test, y_train, y_test = X.loc[train_index], X.loc[test_index], y.loc[train_index], y.loc[test_index]
 
-        X_train = scale(X_train)
-        X_test = scale(X_test)
+        scaler = preprocessing.StandardScaler().fit(X_train)
+        X_train = scaler.transform(X_train)
+        X_test = scaler.transform(X_test)
 
         #Handle class imbalance by assigning weights to the samples in the loss function
         sample_weights = compute_sample_weight('balanced', y_train)
@@ -58,16 +62,44 @@ class LinearClassifier:
         # multi-class Perceptron / SVM
         # nearest neighbor, generative probabilistic models
 
-        return self.validateClassifier(X_test, y_test)
+        return self.validateClassifier(X_test, y_test, plot = True)
 
+    def k_fold_train_classifier(self):
+        tot_test_sum, tot_test_samples, tot_conf_matr = 0, 0, None
+        X = self.feature_block.drop(columns='target_class')
+        y = self.feature_block['target_class']
 
-    def validateClassifier(self, X_test, y_test):
+        skf = StratifiedKFold(n_splits=20)
+        for train_index, test_index in skf.split(X, y):
+            X_train, X_test, y_train, y_test = X.iloc[train_index], X.iloc[test_index], y.iloc[train_index], y.iloc[test_index]
+
+            scaler = preprocessing.StandardScaler().fit(X_train)
+            X_train = scaler.transform(X_train)
+            X_test = scaler.transform(X_test)
+
+            sample_weights = compute_sample_weight('balanced', y_train)
+
+            self.fit = self.model.fit(X_train, y_train, sample_weight=sample_weights)
+            acc, conf_matr = self.validateClassifier(X_test, y_test)
+
+            tot_test_sum += acc*len(test_index)
+            tot_test_samples += len(test_index)
+
+            if tot_conf_matr is None:
+                tot_conf_matr = conf_matr
+            else:
+                tot_conf_matr += conf_matr
+
+        return tot_test_sum/tot_test_samples, tot_conf_matr
+
+    def validateClassifier(self, X_test, y_test, plot = False):
         y_out = self.fit.predict(X_test)
         y_out_confidence = self.fit.decision_function(X_test)
         y_out_confidence = 1/(1+np.exp(-y_out_confidence))
 
-        plot_confusion_matrix(self.fit, X_test, y_test, display_labels = ['eth', 'glu', 'nea', 'sal']) #, normalize='true'
-        plt.show()
+        if plot:
+            plot_confusion_matrix(self.fit, X_test, y_test, display_labels = ['eth', 'glu', 'nea', 'sal']) #, normalize='true'
+            plt.show()
 
         #check if we do binary classification or multilabel
         if len(y_out_confidence.shape) is 1:
@@ -82,6 +114,7 @@ class LinearClassifier:
             print(out_df)
             print("The accuracy score is: ", acc_score)
 
+            return acc_score, confusion_matrix(y_test, y_out, labels = ['eth', 'glu', 'nea', 'sal'])
 
     def accuracy(self, out_df):
         y_pred = out_df["predicted_y"]
@@ -99,4 +132,4 @@ class LinearClassifier:
 
 
     def predict(self, X):
-        return self.fit.predict(X_test)
+        return self.fit.predict(X)
