@@ -7,7 +7,7 @@ import classifier.LinearClassifier as LC
 import feature_visualization.visualization as plot
 
 if __name__=='__main__':
-    mice_data_dir = '/Users/lucadisse/ETH/Master/FS20/StatsLab/CSV data files for analysis'
+    mice_data_dir = r'C:\Users\lkokot\Desktop\ETHZ_STAT_MSC\sem_2\stats_lab\analysis\CSV data files for analysis'
     md = mice_data.MiceDataMerger(mice_data_dir)
     md2 = mice_data.MiceDataMerger(mice_data_dir)
 
@@ -42,8 +42,8 @@ if __name__=='__main__':
 
     # as signal choose either the running or brain_signal
     feature_generator = feature_generator.FeatureExtractor(own_fc_parameters, md, 'brain_signal', brain_half='right',
-                                                           mouse_ids=mice_ids, slice_min=30, target='all_vs_all',
-                                                           part_last=20, equal_length= True)
+                                                           mouse_ids=training_mice, slice_min=30, target='all_vs_all',
+                                                           part_last=15, equal_length= True, slice_end = 60, overlap_ratio = 0.8)
 
     relevant_features = feature_generator.relevantFeatures()
     #validation features
