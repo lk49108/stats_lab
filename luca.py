@@ -7,7 +7,8 @@ import classifier.LinearClassifier as LC
 import feature_visualization.visualization as plot
 
 if __name__=='__main__':
-    mice_data_dir = '/Users/lucadisse/ETH/Master/FS20/StatsLab/CSV data files for analysis'
+#    mice_data_dir = r'C:\Users\lkokot\Desktop\ETHZ_STAT_MSC\sem_2\stats_lab\analysis\CSV data files for analysis'
+    mice_data_dir = r'/Users/lucadisse/ETH/Master/FS20/StatsLab/CSV data files for analysis'
     md = mice_data.MiceDataMerger(mice_data_dir)
 
     # for defining own faetures fill them binto the dictionary
@@ -40,23 +41,26 @@ if __name__=='__main__':
     #TODO read features from saved format
 
     # as signal choose either the running or brain_signal
-    train_feature_generator = feature_generator.FeatureExtractor(md, 'brain_signal', brain_half='right',
-                                                           mouse_ids=mice_ids-validation_mice, slice_min=30, target='all_vs_all',
-                                                           part_last=15)
-    test_feature_generator = feature_generator.FeatureExtractor(md, 'brain_signal', brain_half='right',
-                                                           mouse_ids=validation_mice, slice_min=30, target='all_vs_all',
-                                                           part_last=15)
+    train_feature_generator = feature_generator.FeatureExtractor(md, signal_type='brain_signal', brain_half='right',
+                                                           mouse_ids=training_mice, slice_min=30, target='all_vs_all',
+                                                           part_last=15, equal_length= True, slice_end = 60, overlap_ratio = 0.8)
+    test_feature_generator = feature_generator.FeatureExtractor(md, signal_type='brain_signal', brain_half='right',
+                                                           mouse_ids=training_mice, slice_min=30, target='all_vs_all',
+                                                           part_last=15, equal_length= True, slice_end = 60, overlap_ratio = 0.8)
 
     relevant_train_features, relevant_fc_parameters = train_feature_generator.relevantFeatures(feature_dict=fc_parameters)
 
     relevant_test_features = test_feature_generator.getFeatures(feature_dict=relevant_fc_parameters)
 
     feature_block = relevant_train_features.append(relevant_test_features)
+    #feature_generator = feature_generator.FeatureExtractor(own_fc_parameters, md, 'brain_signal', brain_half='right',
+ #                                                          mouse_ids=training_mice, slice_min=30, target='all_vs_all',
+#                                                           part_last=15, equal_length= True, slice_end = 60, overlap_ratio = 0.8)
 
     #validation features
     print('Feature Values:\n', feature_block)
 
-
+    print(feature_block.columns)
     classifier = LC.LinearClassifier(feature_block, C_val = 1)
 
     # splittype either 'subject' or 'ratio' with percentages of whole data
