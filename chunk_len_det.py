@@ -29,7 +29,7 @@ if __name__=='__main__':
 
     with open(out_file, 'w') as out:
 
-        for chunk_length in range(5, 31):
+        for chunk_length in range(4, 1, -1):
             try:
                 print('Chunk length:', chunk_length)
                 feature_vals = feature_generator.FeatureExtractor(features,
