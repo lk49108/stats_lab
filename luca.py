@@ -9,9 +9,8 @@ import feature_visualization.visualization as plot
 if __name__=='__main__':
     mice_data_dir = '/Users/lucadisse/ETH/Master/FS20/StatsLab/CSV data files for analysis'
     md = mice_data.MiceDataMerger(mice_data_dir)
-    md2 = mice_data.MiceDataMerger(mice_data_dir)
 
-    # for defining own features fill into the
+    # for defining own faetures fill them binto the dictionary
     own_fc_parameters = {
          "large_standard_deviation": [{"r": 0.05}, {"r": 0.1}],
          "abs_energy": None,
@@ -41,17 +40,25 @@ if __name__=='__main__':
     #TODO read features from saved format
 
     # as signal choose either the running or brain_signal
-    feature_generator = feature_generator.FeatureExtractor(own_fc_parameters, md, 'brain_signal', brain_half='right',
-                                                           mouse_ids=mice_ids, slice_min=30, target='all_vs_all',
-                                                           part_last=20, equal_length= True)
+    train_feature_generator = feature_generator.FeatureExtractor(md, 'brain_signal', brain_half='right',
+                                                           mouse_ids=mice_ids-validation_mice, slice_min=30, target='all_vs_all',
+                                                           part_last=15)
+    test_feature_generator = feature_generator.FeatureExtractor(md, 'brain_signal', brain_half='right',
+                                                           mouse_ids=validation_mice, slice_min=30, target='all_vs_all',
+                                                           part_last=15)
 
-    relevant_features = feature_generator.relevantFeatures()
+    relevant_train_features, relevant_fc_parameters = train_feature_generator.relevantFeatures(feature_dict=fc_parameters)
+
+    relevant_test_features = test_feature_generator.getFeatures(feature_dict=relevant_fc_parameters)
+
+    feature_block = relevant_train_features.append(relevant_test_features)
+
     #validation features
-    print('Number of features selected: ', relevant_features)
+    print('Feature Values:\n', feature_block)
 
 
-    classifier = LC.LinearClassifier(relevant_features, C_val = 1)
-    #classifier = LC.LinearClassifier(extracted_features)
+    classifier = LC.LinearClassifier(feature_block, C_val = 1)
+
     # splittype either 'subject' or 'ratio' with percentages of whole data
     classifier.classify(train_test={'split_type': 'subject', 'train': list(mice_ids-validation_mice), 'test' : list(validation_mice)})
     classifier.classify(train_test={'split_type': 'ratio', 'train': 0.7, 'test': 0.3})

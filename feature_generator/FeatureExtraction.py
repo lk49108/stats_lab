@@ -15,14 +15,13 @@ class FeatureExtractor:
     y = pd.Series()
     collected_data = pd.DataFrame()
 
-    def __init__(self, feature_dict, md ,signal_type, brain_half = 'left', mouse_ids={165, 166}, slice_min=30,
-                 target="treatment", part_last=10, equal_length = True):
-        self.fc_parameters = feature_dict
+    def __init__(self, md ,signal_type, brain_half = 'left', mouse_ids={165, 166}, slice_min=30,
+                 target="treatment", part_last=10):
         self.mouse_data = md
         self.signal_type = signal_type
         self.mouse_ids = mouse_ids
         self.chunk_duration = part_last
-        self.data_preparation(signal_type, slice_min, target, part_last, equal_length)
+        self.data_preparation(signal_type, slice_min, target, part_last)
         if signal_type == 'brain_signal' and brain_half == 'right':
             column_value = self.mouse_data.col_names[self.signal_type][2]
         elif signal_type == 'brain_signal' and brain_half == 'both':
@@ -32,36 +31,36 @@ class FeatureExtractor:
         self.column_value = column_value
 
 
-    def getFeatures(self, target_class = False):
+    def getFeatures(self, feature_dict):
         extracted_features = extract_features(self.collected_data, column_id='id', column_sort='time_min',
                          column_value= self.column_value,
-                         default_fc_parameters= self.fc_parameters)
+                         kind_to_fc_parameters=feature_dict)
         extracted_features.selection_type = 'all'
         extracted_features['target_class'] = self.y
         return extracted_features
 
-    def getFeatures2(self, target_class = False):
+    def getFeatures2(self, feature_dict):
         extracted_features = extract_features(self.collected_data, column_id='id', column_sort='time_min',
                          column_value= self.column_value,
-                         default_fc_parameters= self.fc_parameters)
+                         default_fc_parameters= feature_dict)
         extracted_features.selection_type = 'all'
-        if target_class:
-            extracted_features['target_class'] = self.y
+        extracted_features['target_class'] = self.y
         X_filtered = select_features(extracted_features, self.y, ml_task = 'classification')
         kind_to_fc_parameters = from_columns(X_filtered)
         return kind_to_fc_parameters
 
 
-    def relevantFeatures(self):
+    def relevantFeatures(self, feature_dict):
         features_filtered_direct = extract_relevant_features(self.collected_data, y = self.y, column_id='id', column_sort='time_min',
-                                                             column_value= self.column_value, default_fc_parameters=self.fc_parameters)
+                                                             column_value= self.column_value, default_fc_parameters=feature_dict)
+        relevant_fc_parameters = from_columns(features_filtered_direct)
         print('Identified ', len(features_filtered_direct.columns), ' relevant features.')
         features_filtered_direct['target_class'] = self.y
         features_filtered_direct.selection_type = 'relevant'
-        return features_filtered_direct
+        return features_filtered_direct, relevant_fc_parameters
 
 
-    def data_preparation(self, signal_type, slice_min, target, part_last, equal_length):
+    def data_preparation(self, signal_type, slice_min, target, part_last):
         if target is not 'nea_vs_all' and target is not 'all_vs_all':
             raise ValueError('The target argument must be either nea_vs_all or all_vs_all')
 
@@ -86,7 +85,7 @@ class FeatureExtractor:
                 chunck = chunck.get_pandas(time=True)
 
                 # sometimes chuncks have length 0 and we need to skip those chuncks
-                if not len(chunck):
+                if len(chunck) < 1000:
                     continue
 
                 chunck_itterator = chunck_itterator + 1
@@ -94,7 +93,6 @@ class FeatureExtractor:
 
                 # if multiple files produce the same id then we need to distingiush them by the file id
                 if current_id in previous_ids:
-                    print('now here---------')
                     file_itterator = file_itterator + 1
 
                 # id contains fileid-chunckid-mouseid_treatmentclass

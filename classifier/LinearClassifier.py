@@ -6,6 +6,7 @@ from sklearn.preprocessing import scale
 from sklearn.metrics import balanced_accuracy_score, plot_confusion_matrix, roc_auc_score, roc_curve
 import matplotlib.pyplot as plt
 from sklearn.utils.class_weight import compute_sample_weight
+from sklearn.svm import SVC
 import os
 from collections import Counter
 
@@ -22,6 +23,8 @@ class LinearClassifier:
         if model_type == 'logistic':
             self.model = linear_model.LogisticRegression(penalty= penalty, solver = 'saga', max_iter=10000, C=C_val)
 
+        if model_type == 'svm':
+            self.model = SVC(C=C_val, kernel='rbf', gamma='scale', class_weight='balanced')
         self.feature_block = features
 
 
