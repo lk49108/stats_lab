@@ -18,13 +18,13 @@ class FeatureExtractor:
 
 
     def __init__(self, md, signal_type, brain_half = 'left', mouse_ids={165, 166}, slice_min=30,
-                 target="treatment", part_last=10, equal_length = True, slice_end = 60, overlap_ratio = 0):
+                 target="treatment", part_last=10, slice_end = 60, overlap_ratio = 0):
         self.mouse_data = md
         self.signal_type = signal_type
         self.mouse_ids = mouse_ids
         self.chunk_duration = part_last
 
-        self.data_preparation(signal_type, slice_min, target, part_last, equal_length, slice_end, overlap_ratio)
+        self.data_preparation(signal_type, slice_min, target, part_last, slice_end, overlap_ratio)
         if signal_type == 'brain_signal' and brain_half == 'right':
             column_value = self.mouse_data.col_names[self.signal_type][2]
         elif signal_type == 'brain_signal' and brain_half == 'both':
@@ -64,7 +64,7 @@ class FeatureExtractor:
 
 
 
-    def data_preparation(self, signal_type, slice_min, target, part_last, equal_length, slice_end, overlap_ratio=0):
+    def data_preparation(self, signal_type, slice_min, target, part_last, slice_end, overlap_ratio=0):
         if target is not 'nea_vs_all' and target is not 'all_vs_all':
             raise ValueError('The target argument must be either nea_vs_all or all_vs_all')
         if overlap_ratio is None:

@@ -42,11 +42,11 @@ if __name__=='__main__':
 
     # as signal choose either the running or brain_signal
     train_feature_generator = feature_generator.FeatureExtractor(md, signal_type='brain_signal', brain_half='right',
-                                                           mouse_ids=training_mice, slice_min=30, target='all_vs_all',
-                                                           part_last=15, equal_length= True, slice_end = 60, overlap_ratio = 0.8)
+                                                           mouse_ids=mice_ids-validation_mice, slice_min=30, target='all_vs_all',
+                                                           part_last=15, slice_end = 60, overlap_ratio = 0.8)
     test_feature_generator = feature_generator.FeatureExtractor(md, signal_type='brain_signal', brain_half='right',
-                                                           mouse_ids=training_mice, slice_min=30, target='all_vs_all',
-                                                           part_last=15, equal_length= True, slice_end = 60, overlap_ratio = 0.8)
+                                                           mouse_ids=validation_mice, slice_min=30, target='all_vs_all',
+                                                           part_last=15, slice_end = 60, overlap_ratio = 0.8)
 
     relevant_train_features, relevant_fc_parameters = train_feature_generator.relevantFeatures(feature_dict=fc_parameters)
 
