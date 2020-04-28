@@ -37,12 +37,17 @@ def envelope(df, window_size=500):
     return df_envelope
 
 model = [0,0,0,0]
-residuals = [0,0,0,0]
+equal, unequal = np.zeros(4), np.zeros(4)
+residuals = [[0],[0],[0],[0]]
+mouse_id = 166
+objects = ('glu', 'eth', 'sal', 'nea')
+lag_size = 1 #for % changes of time series comparison
+
 
 for i in range(len(treatments)):
-    brain = md.fetch_mouse_signal(mouse_id = 166, treat=treatments[i], signal='brain_signal').get_pandas()
-    running = md.fetch_mouse_signal(mouse_id = 166, treat=treatments[i], signal='running').get_pandas()
-    heat = md.fetch_mouse_signal(mouse_id = 166, treat=treatments[i], signal='heat').get_pandas()
+    brain = md.fetch_mouse_signal(mouse_id = mouse_id, treat=treatments[i], signal='brain_signal').get_pandas()
+    running = md.fetch_mouse_signal(mouse_id = mouse_id, treat=treatments[i], signal='running').get_pandas()
+    heat = md.fetch_mouse_signal(mouse_id = mouse_id, treat=treatments[i], signal='heat').get_pandas()
 
     brain = brain.set_index('time_min')
     running = running.set_index('time_min')
@@ -91,7 +96,39 @@ for i in range(len(treatments)):
     plt.show()
 
 
-#Look at the distribution of the data
+    #We output a plot to see if all changes in % of both time series have the same sign
+    equal_sign = ((prediction.pct_change(periods=lag_size)) * (y.pct_change(periods=lag_size))).dropna()
+    equal[i] = ((equal_sign >= 0).sum()/len(equal_sign))
+    unequal[i] = ((equal_sign < 0).sum()/len(equal_sign))
+
+    if i+1 == len(treatments):
+        plt.figure()
+        y_pos = np.arange(len(treatments))
+        plt.bar(y_pos, equal, align= 'center')
+        plt.xticks(y_pos, objects)
+        plt.title('Equality of sign for % change')
+        plt.ylim(top=1)
+
+        #plt.figure()
+        #plt.bar(y_pos, unequal, align= 'center')
+        #plt.xticks(y_pos, objects)
+
+        # We look at the distribution of the residuals
+        plt.figure()
+        for i in range(len(residuals)):
+            plt.hist(residuals[i].iloc[:, 0], bins=500, label='Residuals of TS Regression' + ' ' + treatments[i])
+            plt.legend()
+            plt.show()
+
+'''
+#Now we implement a function that takes a series as an input and outputs the % change with a given lag level
+def percentage(series, lag_level=1):
+    perc = np.array([x for x in range(len(series))])
+    for i in range(len(series)-lag_level):
+        perc[i] = ((pd.Series.to_numpy(series)[i+lag_level]/pd.Series.to_numpy(series)[i])-1)
+    return perc
+    
+#Look at the distribution of the raw data
 
 for i in range(len(treatments)):
     brain = md.fetch_mouse_signal(mouse_id = 166, treat=treatments[i], signal='brain_signal').get_pandas()
@@ -103,7 +140,7 @@ for i in range(len(treatments)):
     plt.figure()
     plt.hist(brain.iloc[:,1], bins = 100)
     plt.show()
-
+'''
 
 '''
 All about ts regression:
@@ -115,7 +152,7 @@ fig, ax = plt.subplots(figsize=(12,6))
 data.plot('date','close',ax=ax)
 ax.set(title='title')
 
-Time series analysis for auditory data: 
+Time series analysis for auditory data:
 import librosa as lr
 
 audio, sfreq = lr.load('file')
@@ -132,7 +169,7 @@ Rectification (all time points are positive)
 audio-rectified = audio.apply(np.abs)
 audio_envelope = audio_rectified.rolling(50).mean()
 
-After we have the envelope of the time series we can do the 
+After we have the envelope of the time series we can do the
 real feature engineering
 
 envelope_mean = np.mean(audio_envelope, axis = 0)
@@ -166,12 +203,12 @@ def interpolate_and_plot(prices, interpolation):
     # Plot the results, highlighting the interpolated values in black
     fig, ax = plt.subplots(figsize=(10, 5))
     prices_interp.plot(color='k', alpha=.6, ax=ax, legend=False)
-    
+
     # Now plot the interpolated values on top in red
     prices_interp[missing_values].plot(ax=ax, color='r', lw=3, legend=False)
     plt.show()
-    
-    
+
+
     # Your custom function
 def percent_change(series):
     # Collect all *but* the last value of this window, then the final value
@@ -188,7 +225,7 @@ prices_perc.loc["2014":"2015"].plot()
 plt.show()
 
 
-#Next we want to transform the data to standardizie the variance to detect and remove outliers 
+#Next we want to transform the data to standardizie the variance to detect and remove outliers
 #After transformation, each point will represent the % change over a previous window
 def percent_change(series):
     # Collect all *but* the last value of this window, then the final value
@@ -211,8 +248,8 @@ plt.show()
 
 Cross validation for fitting time series
 
-    
-    
+
+
 
 
 
