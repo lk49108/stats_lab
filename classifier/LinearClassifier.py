@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from sklearn.utils.class_weight import compute_sample_weight
 from sklearn import preprocessing
 from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
 import os
 from collections import Counter
 
@@ -17,14 +18,13 @@ class LinearClassifier:
 
 
     def __init__(self, features, model_type='logistic', penalty = 'l2', C_val=1):
-
-        #if model_type == 'logistic':
-        #   self.model = linear_model.LogisticRegression(penalty='none', max_iter = 1000)
-
         if model_type == 'logistic':
-            self.model = linear_model.LogisticRegression(penalty= penalty, solver = 'saga', max_iter=10000, C=C_val)
+            self.model = linear_model.LogisticRegression(penalty=penalty, solver='saga', max_iter=10000, C=C_val, class_weight = 'balanced')
+        elif model_type == 'svm':
+            self.model = SVC(C=C_val, kernel='rbf', gamma='scale', class_weight='balanced')
+        elif model_type == 'random_forest':
+            self.model = RandomForestClassifier()
 
-        self.model=SVC(gamma='auto')
         self.feature_block = features
 
 
@@ -64,9 +64,9 @@ class LinearClassifier:
 
         return self.validateClassifier(X_test, y_test, plot = True)
 
-    def k_fold_train_classifier(self):
+    def k_fold_data_train_classifier(self):
         tot_test_sum, tot_test_samples, tot_conf_matr = 0, 0, None
-        X = self.feature_block.drop(columns='target_class')
+        X = self.feature_block.drop(columns=['target_class', 'chunk_id'])
         y = self.feature_block['target_class']
 
         skf = StratifiedKFold(n_splits=20)
@@ -92,17 +92,59 @@ class LinearClassifier:
 
         return tot_test_sum/tot_test_samples, tot_conf_matr
 
-    def validateClassifier(self, X_test, y_test, plot = False):
+    def k_fold_mice_train_classifier(self, mice_treat_file_ids, log = None):
+        X = self.feature_block.drop(columns=['target_class', 'chunk_id'])
+        y = self.feature_block['target_class']
+        id = self.feature_block['chunk_id']
+
+        tot_test_sum, tot_test_samples, tot_conf_matr = 0, 0, None
+        for mice_treat_file_id in mice_treat_file_ids:
+            test_indices = (id == mice_treat_file_id).tolist()
+            train_indices = [not x for x in test_indices]
+
+            X_train, X_test, y_train, y_test = X.iloc[train_indices], X.iloc[test_indices], y.iloc[train_indices], y.iloc[test_indices]
+
+            scaler = preprocessing.StandardScaler().fit(X_train)
+            X_train = scaler.transform(X_train)
+            X_test = scaler.transform(X_test)
+
+            sample_weights = compute_sample_weight('balanced', y_train)
+
+            self.fit = self.model.fit(X_train, y_train, sample_weight=sample_weights)
+            acc, conf_matr = self.validateClassifier(X_test, y_test, log = log)
+
+            tot_test_sum += acc * len(test_indices)
+            tot_test_samples += len(test_indices)
+
+            if tot_conf_matr is None:
+                tot_conf_matr = conf_matr
+            else:
+                tot_conf_matr += conf_matr
+
+        return tot_test_sum / tot_test_samples, tot_conf_matr
+
+    def k_fold_train_classifier(self, mice_treat_file_ids = None, log = None):
+        tot_test_sum, tot_test_samples, tot_conf_matr = 0, 0, None
+        X = self.feature_block.drop(columns=['target_class', 'chunk_id'])
+        y = self.feature_block['target_class']
+        id = self.feature_block['chunk_id']
+
+        if mice_treat_file_ids is None:
+            return self.k_fold_data_train_classifier()
+        else:
+            return self.k_fold_mice_train_classifier(mice_treat_file_ids = mice_treat_file_ids, log = log)
+
+    def validateClassifier(self, X_test, y_test, plot = False, log = None):
         y_out = self.fit.predict(X_test)
-        y_out_confidence = self.fit.decision_function(X_test)
-        y_out_confidence = 1/(1+np.exp(-y_out_confidence))
+        # y_out_confidence = self.fit.decision_function(X_test)
+        # y_out_confidence = 1/(1+np.exp(-y_out_confidence))
 
         if plot:
             plot_confusion_matrix(self.fit, X_test, y_test, display_labels = ['eth', 'glu', 'nea', 'sal']) #, normalize='true'
             plt.show()
 
         #check if we do binary classification or multilabel
-        if len(y_out_confidence.shape) is 1:
+        if False:#len(y_out_confidence.shape) is 1:
             out_df = pd.DataFrame({'real_y': y_test, 'predicted_y': y_out, 'predicted_y_confidence': y_out_confidence})
             acc_score, auc_score = self.accuracy(out_df)
             print(out_df)
@@ -113,6 +155,10 @@ class LinearClassifier:
             acc_score  = self.accuracy(out_df)
             print(out_df)
             print("The accuracy score is: ", acc_score)
+
+            if log:
+                log.write('\nPrediction vs labels:\n' + str(out_df))
+                log.write('\nPrediction accuracy: ' + str(acc_score))
 
             return acc_score, confusion_matrix(y_test, y_out, labels = ['eth', 'glu', 'nea', 'sal'])
 
