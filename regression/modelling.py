@@ -146,7 +146,7 @@ for j in range(len(mouse_ids)):
 
 
 
-'''
+
 #Now we implement a function that takes a series as an input and outputs the % change with a given lag level
 def percentage(series, lag_level=1):
     perc = np.array([x for x in range(len(series))])
