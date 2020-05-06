@@ -26,7 +26,7 @@ if __name__=='__main__':
     #fc_parameters = ComprehensiveFCParameters()
     feature_generator = feature_generator.FeatureExtractor(fc_parameters, md, 'brain_signal', brain_half='right',
                                                            mouse_ids={165, 166}, slice_min=30, target="group",
-                                                           part_last=10, equal_length= True)
+                                                           part_last=10-wq, equal_length= True)
     #relevant_features = feature_generator.relevantFeatures()
     extracted_features = feature_generator.getFeatures()
     #print(extracted_features)
