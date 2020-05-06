@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import itertools as iter
 from tsfresh import extract_relevant_features, extract_features
-from tsfresh.feature_selection.selection import select_features
+from tsfresh.feature_selection.selection import select_features, calculate_relevance_table
 from tsfresh.feature_extraction.settings import from_columns
 import data_scheduler.lib_data_merger as lib_merger
 #these are the different settings for the functions
@@ -40,7 +40,12 @@ class FeatureExtractor:
                          kind_to_fc_parameters=feature_dict)
         extracted_features.selection_type = 'all'
         extracted_features['target_class'] = self.y
+        print(self.collected_data)
         return extracted_features
+
+    def getRelevance(self, features, target):
+        extracted_relevances = calculate_relevance_table(features, target)
+        return extracted_relevances
 
     def getFeatures2(self, feature_dict):
         extracted_features = extract_features(self.collected_data, column_id='id', column_sort='time_min',
