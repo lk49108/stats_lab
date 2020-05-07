@@ -44,10 +44,10 @@ def crosscorr(datax, datay, lag=0, wrap=False):
         return datax.corr(shiftedy)
     else:
         return datax.corr(datay.shift(lag))
-def plot_crosscorr(brain_signal, running_signal):
-    brain = brain_signal.sliced_data(30).get_pandas()
+def plot_crosscorr(brain_signal, running_signal, min_lowerbound, min_upperbound,):
+    brain = brain_signal.sliced_data(min_lowerbound).left_slice(min_upperbound).get_pandas()
     brain = brain.set_index('time_min')
-    running = running_signal.sliced_data(30).get_pandas()
+    running = running_signal.sliced_data(min_lowerbound).left_slice(min_upperbound).get_pandas()
     running = running.set_index('time_min')
 
     d1 = brain.iloc[:, 1]
@@ -63,10 +63,10 @@ def plot_crosscorr(brain_signal, running_signal):
            xlabel='Offset',
            ylabel='Pearson r')
     plt.legend()
-def return_crosscorr(brain_signal, running_signal):
-    brain = brain_signal.sliced_data(30).get_pandas()
+def return_crosscorr(brain_signal, running_signal, min_lowerbound, min_upperbound):
+    brain = brain_signal.sliced_data(min_lowerbound).left_slice(min_upperbound).get_pandas()
     brain = brain.set_index('time_min')
-    running = running_signal.sliced_data(30).get_pandas()
+    running = running_signal.sliced_data(min_lowerbound).left_slice(min_upperbound).get_pandas()
     running = running.set_index('time_min')
 
     d1 = brain.iloc[:, 1]
@@ -74,10 +74,10 @@ def return_crosscorr(brain_signal, running_signal):
     minutes = 30
     rs = [crosscorr(d1, d2, lag) for lag in range(-int(minutes), int(minutes))]
     return np.max(rs)
-def return_offset(brain_signal, running_signal):
-    brain = brain_signal.sliced_data(30).get_pandas()
+def return_offset(brain_signal, running_signal, min_lowerbound, min_upperbound):
+    brain = brain_signal.sliced_data(min_lowerbound).left_slice(min_upperbound).get_pandas()
     brain = brain.set_index('time_min')
-    running = running_signal.sliced_data(30).get_pandas()
+    running = running_signal.sliced_data(min_lowerbound).left_slice(min_upperbound).get_pandas()
     running = running.set_index('time_min')
 
     d1 = brain.iloc[:, 1]
@@ -86,6 +86,10 @@ def return_offset(brain_signal, running_signal):
     rs = [crosscorr(d1, d2, lag) for lag in range(-int(minutes), int(minutes))]
     offset = np.ceil(len(rs) / 2) - np.argmax(rs)
     return offset
+
+#Interval in minutes
+lower = 30
+upper = 70
 
 #We loop through all mice and treatments to get two columns: Pearson R and the respective treatment
 for j in range(len(mouse_ids)):
@@ -106,17 +110,17 @@ for j in range(len(mouse_ids)):
         # Output of optimal Pearson r value and offset
         if brain_signal is not None and running_signal is not None:
             if type(brain_signal) is not list and type(running_signal) is not list:
-                df_anova_r = df_anova_r.append(pd.DataFrame({'R': [return_crosscorr(brain_signal, running_signal)],
+                df_anova_r = df_anova_r.append(pd.DataFrame({'R': [return_crosscorr(brain_signal, running_signal, lower, upper)],
                                               'Treatment': [treatments[i]]}))
-                df_anova_off = df_anova_off.append(pd.DataFrame({'Offset': [return_offset(brain_signal, running_signal)],
+                df_anova_off = df_anova_off.append(pd.DataFrame({'Offset': [return_offset(brain_signal, running_signal, lower, upper)],
                                                              'Treatment': [treatments[i]]}))
 
 
             elif type(brain_signal) is list and type(running_signal) is list:
                 for m in range(len(brain_signal)):
-                    df_anova_r = df_anova_r.append(pd.DataFrame({'R': [return_crosscorr(brain_signal[m], running_signal[m])],
+                    df_anova_r = df_anova_r.append(pd.DataFrame({'R': [return_crosscorr(brain_signal[m], running_signal[m], lower, upper)],
                                                   'Treatment': [treatments[i]]}))
-                    df_anova_off = df_anova_off.append(pd.DataFrame({'Offset': [return_offset(brain_signal[m], running_signal[m])],
+                    df_anova_off = df_anova_off.append(pd.DataFrame({'Offset': [return_offset(brain_signal[m], running_signal[m], lower, upper)],
                                       'Treatment': [treatments[i]]}))
 
         else:
@@ -127,6 +131,7 @@ aov_r = pg.anova(data=df_anova_r, dv='R', between='Treatment', ss_type=2, detail
 print(aov_r)
 aov_off = pg.anova(data=df_anova_off, dv='Offset', between='Treatment', ss_type=2, detailed=True)
 print(aov_off)
+
 
 #We visualize the results for boxplots
 df_anova_r.boxplot(column='R', by='Treatment')
