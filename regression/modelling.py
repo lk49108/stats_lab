@@ -6,14 +6,17 @@ sys.path.insert(0, os.getcwd())
 
 import data_scheduler.lib_data_merger as mice_data
 import matplotlib.pyplot as plt
+import os as os
 import numpy as np
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import cross_val_score
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+from statsmodels.graphics.tsaplots import plot_acf
+from statsmodels.graphics.tsaplots import plot_pacf
 
 #First we want to fetch the relevant data which includes the brain and running activity
-mice_data_dir = r'C:\Users\Massimo\Documents\StatsLab'
+mice_data_dir = r'C:\Users\Massimo\Documents\StatsLab\New Data'
 md = mice_data.MiceDataMerger(mice_data_dir)
 treatments = ['glu', 'eth', 'sal', 'nea']
 signals = ['brain_signal', 'running', 'v_o2', 'v_co2', 'rq', 'heat']
@@ -51,101 +54,124 @@ new_set = set(new_list)
 model = [0,0,0,0]
 equal, unequal = np.zeros(4), np.zeros(4)
 residuals = [[0],[0],[0],[0]]
-mouse_ids = [165,166,126, 168, 170, 299, 302, 303, 306, 307, 323, 327]
+mouse_ids_list = [165, 166, 126, 168, 170, 299, 302, 303, 306, 307, 323, 327]
+mouse_ids = mouse_ids_list[1:2] #(to select all mice use [0:12])
 objects = ('glu', 'eth', 'sal', 'nea')
 lag_size = 1 #for % changes of time series comparison
 
 for j in range(len(mouse_ids)):
     for i in range(len(treatments)):
-        brain = md.fetch_mouse_signal(mouse_id = mouse_ids[j], treat=treatments[i], signal='brain_signal').sliced_data(30).get_pandas()
-        running = md.fetch_mouse_signal(mouse_id = mouse_ids[j], treat=treatments[i], signal='running').sliced_data(30).get_pandas()
-        heat = md.fetch_mouse_signal(mouse_id = mouse_ids[j], treat=treatments[i], signal='heat').sliced_data(30).get_pandas()
+        brain_signal = md.fetch_mouse_signal(mouse_id = mouse_ids[j], treat=treatments[i], signal='brain_signal')
+        running_signal = md.fetch_mouse_signal(mouse_id = mouse_ids[j], treat=treatments[i], signal='running')
 
-        brain = brain.set_index('time_min')
-        running = running.set_index('time_min')
-        heat = heat.set_index('time_min')
+        if brain_signal is not None and running_signal is not None \
+                and type(brain_signal) is not list and type(running_signal) is not list:
+            brain = brain_signal.sliced_data(30).get_pandas()
+            brain = brain.set_index('time_min')
+            running = running_signal.sliced_data(30).get_pandas()
+            running = running.set_index('time_min')
 
-        #We get the envelopes
-        brain_envelope = envelope(brain)
-        running_envelope = envelope(running)
-        heat_envelope = envelope(heat)
+            #ACF: We want to discover if there is a specific dependency structure of the time series
+            plot_acf(brain.iloc[:, 1], lags = 100, title='Autocorrelation Brain Activity'+str(mouse_ids[j])+str(treatments[i]))
+            plot_acf(running, lags = 100, title='Autocorrelation Running Activity'+str(mouse_ids[j])+str(treatments[i]))
+            plt.show()
 
-        print('I got mouse id'+str(mouse_ids[i]))
-
-        '''
-
-        # Now we fit a linear regression model and calculate it's cv score
-        X = pd.concat([brain_envelope.iloc[:, 1], brain_envelope.iloc[:, 1]**2,
-        brain_envelope.iloc[:, 1]**3], axis=1)
-        y = running_envelope
-
-        #Before we fit the model, we standardize the values within the range [0,1]
-
-        mm = MinMaxScaler()
-        mm.fit(X)
-        X = mm.transform(X)
-        X = pd.DataFrame(X).set_index(running_envelope.index)
-
-        mm = MinMaxScaler()
-        mm.fit(y)
-        y = mm.transform(y)
-        y = pd.DataFrame(y).set_index(running_envelope.index)
-
-        #We fit the model with the Ridge linear regression model
-        ridge = Ridge()
-        model[i] = ridge.fit(X,y)
-        prediction = pd.DataFrame(ridge.predict(X)).set_index(running_envelope.index)
-        #We look at the scores
-        scores = cross_val_score(Ridge(), X, y, cv=5)
-        print(scores); print(treatments[i])
-
-        #We look at the residuals
-        residuals[i] = prediction - y
-
-        #We plot the prediction vs. the actual values
-        plt.figure()
-        plt.plot(prediction, label = 'Prediction')
-        plt.plot(y, label = 'Running Activity of'+' '+str(mouse_ids[j])+' '+treatments[i])
-        #plt.plot(X.set_index(running_envelope.index), label = 'Brain Activity of 165'+' '+i)
-        plt.title('Time Series Regression: Treatment'+' '+ treatments[i]+' '+'of'+' '+str(mouse_ids[j]))
-        plt.legend()
-        plt.show()
+            # PACF: We want to discover if there is a specific dependency structure of the time series
+            #plot_pacf(brain.iloc[:, 1], lags = 50, title='PACF Brain Activity'+str(mouse_ids[j])+str(treatments[i]))
+            #plot_pacf(running, lags = 50, title='PACF Running Activity'+str(mouse_ids[j])+str(treatments[i]))
+            #plt.show()
 
 
-        #We output a plot to see if all changes in % of both time series have the same sign
-        equal_sign = ((prediction.pct_change(periods=lag_size)) * (y.pct_change(periods=lag_size))).dropna()
-        equal[i] = ((equal_sign >= 0).sum()/len(equal_sign))
-        unequal[i] = ((equal_sign < 0).sum()/len(equal_sign))
+            '''
 
-        if i+1 == len(treatments):
+            # Scatterplot to see relationship between neural and running activity
+            log_brain = (brain.iloc[:, 1].apply(np.abs)+1).apply(np.log)
+            log_running = (running+1).apply(np.log)
             plt.figure()
-            y_pos = np.arange(len(treatments))
-            plt.bar(y_pos, equal, align= 'center')
-            plt.xticks(y_pos, objects)
-            plt.title('Equality of sign for % change of '+str(mouse_ids[j]))
-            plt.ylim(top=1)
+            plt.scatter(log_brain, log_running, alpha=0.3)
+            plt.title('Scatter plot')
+            plt.xlabel('Neural activity')
+            plt.ylabel('Running activity')
+            plt.show()
 
-            #plt.figure()
-            #plt.bar(y_pos, unequal, align= 'center')
-            #plt.xticks(y_pos, objects)
+            #We get the envelopes
+            brain_envelope = envelope(brain)
+            running_envelope = envelope(running)
 
-            # We look at the distribution of the residuals
+            ## Check if all mice are included: print('I got mouse id'+str(mouse_ids[j])+str(treatments[i]))
+
+            # Now we fit a linear regression model and calculate it's cv score
+            X = pd.concat([brain_envelope.iloc[:, 1], brain_envelope.iloc[:, 1]**2,
+            brain_envelope.iloc[:, 1]**3], axis=1)
+            y = running_envelope
+
+            #Before we fit the model, we standardize the values within the range [0,1]
+
+            mm = MinMaxScaler()
+            mm.fit(X)
+            X = mm.transform(X)
+            X = pd.DataFrame(X).set_index(running_envelope.index)
+
+            mm = MinMaxScaler()
+            mm.fit(y)
+            y = mm.transform(y)
+            y = pd.DataFrame(y).set_index(running_envelope.index)
+
+            #We fit the model with the Ridge linear regression model
+            ridge = Ridge()
+            model[i] = ridge.fit(X,y)
+            prediction = pd.DataFrame(ridge.predict(X)).set_index(running_envelope.index)
+            #We look at the scores
+            scores = cross_val_score(Ridge(), X, y, cv=5)
+            print(scores); print(treatments[i])
+
+            #We look at the residuals
+            residuals[i] = prediction - y
+
+            #We plot the prediction vs. the actual values
             plt.figure()
-            for i in range(len(residuals)):
+            plt.plot(prediction, label = 'Prediction')
+            plt.plot(y, label = 'Running Activity of'+' '+str(mouse_ids[j])+' '+treatments[i])
+            #plt.plot(X.set_index(running_envelope.index), label = 'Brain Activity of 165'+' '+i)
+            plt.title('Time Series Regression: Treatment'+' '+ treatments[i]+' '+'of'+' '+str(mouse_ids[j]))
+            plt.legend()
+            plt.show()
 
-                plt.hist(residuals[i].iloc[:, 0], bins=500, label='Residuals of TS Regression' + ' ' + treatments[i])
-                plt.legend()
-                plt.title('Residuals of TS Regression of '+str(mouse_ids[j]))
-                plt.show()
+
+            #We output a plot to see if all changes in % of both time series have the same sign
+            equal_sign = ((prediction.pct_change(periods=lag_size)) * (y.pct_change(periods=lag_size))).dropna()
+            equal[i] = ((equal_sign >= 0).sum()/len(equal_sign))
+            unequal[i] = ((equal_sign < 0).sum()/len(equal_sign))
+
+            if i+1 == len(treatments):
+                plt.figure()
+                y_pos = np.arange(len(treatments))
+                plt.bar(y_pos, equal, align= 'center')
+                plt.xticks(y_pos, objects)
+                plt.title('Equality of sign for % change of '+str(mouse_ids[j]))
+                plt.ylim(top=1)
+
+                #plt.figure()
+                #plt.bar(y_pos, unequal, align= 'center')
+                #plt.xticks(y_pos, objects)
+
+                # We look at the distribution of the residuals
+                #plt.figure()
+                #for i in range(len(residuals)):
+
+                    #plt.hist(residuals[i].iloc[:, 0], bins=500, label='Residuals of TS Regression' + ' ' + treatments[i])
+                    #plt.legend()
+                    #plt.title('Residuals of TS Regression of '+str(mouse_ids[j]))
+                    #plt.show()
 
 #Next we want to collect the regression coefficients for all mice and then contrast them against
 #the saline treatment to see if they are significantly different
 #For this we need to first load the full data of all mice, extract the coefficients and then compare them
 #e.g. via a two-sample t-test
 
+'''
 
-
-
+'''
 
 #Now we implement a function that takes a series as an input and outputs the % change with a given lag level
 def percentage(series, lag_level=1):
