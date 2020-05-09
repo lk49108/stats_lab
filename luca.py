@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import feature_visualization.visualization as plot
 import classifier.LinearClassifier as LC
 import feature_visualization.visualization as plot
+import pandas as pd
 
 if __name__=='__main__':
 #    mice_data_dir = r'C:\Users\lkokot\Desktop\ETHZ_STAT_MSC\sem_2\stats_lab\analysis\CSV data files for analysis'
@@ -48,21 +49,23 @@ if __name__=='__main__':
                                                            mouse_ids=validation_mice, slice_min=35, target='all_vs_all',
                                                            part_last=15, slice_end = 55, overlap_ratio = 0.9)
 
-    relevant_train_features, relevant_fc_parameters = train_feature_generator.relevantFeatures(feature_dict=fc_parameters)
+    recompute_features = True
+    if recompute_features:
+        relevant_train_features, relevant_fc_parameters = train_feature_generator.relevantFeatures(feature_dict=fc_parameters)
 
-    feature_relevance = train_feature_generator.getRelevance(features=relevant_train_features.drop('target_class', axis=1),
-                                                             target=relevant_train_features['target_class'])
+        feature_relevance = train_feature_generator.getRelevance(features=relevant_train_features.drop('target_class', axis=1),
+                                                                 target=relevant_train_features['target_class'])
 
-    feature_relevance.sort_values(by=['p_value']).to_csv('feature_relevance.csv')
+        feature_relevance.sort_values(by=['p_value']).to_csv('feature_relevance.csv')
 
-    print(relevant_fc_parameters)
+        print(relevant_fc_parameters)
 
-    relevant_test_features = test_feature_generator.getFeatures(feature_dict=relevant_fc_parameters)
+        relevant_test_features = test_feature_generator.getFeatures(feature_dict=relevant_fc_parameters)
 
-    feature_block = relevant_train_features.append(relevant_test_features)
-    #feature_generator = feature_generator.FeatureExtractor(own_fc_parameters, md, 'brain_signal', brain_half='right',
-    #                                                       mouse_ids=training_mice, slice_min=30, target='all_vs_all',
-    #                                                       part_last=15, equal_length= True, slice_end = 60, overlap_ratio = 0.8)
+        feature_block = relevant_train_features.append(relevant_test_features)
+        feature_block.to_csv('features.csv')
+    else:
+        feature_block = pd.read_csv('features.csv')
 
     #validation features
     print('Feature Values:\n', feature_block)
