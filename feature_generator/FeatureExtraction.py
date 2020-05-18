@@ -70,7 +70,7 @@ class FeatureExtractor:
 
 
     def data_preparation(self, signal_type, slice_min, target, part_last, slice_end, overlap_ratio=0):
-        if target is not 'nea_vs_all' and target is not 'all_vs_all':
+        if target is not 'sal_vs_all' and target is not 'eth_vs_sal' and target is not 'glu_vs_sal' and target is not 'nea_vs_sal':
             raise ValueError('The target argument must be either nea_vs_all or all_vs_all')
         if overlap_ratio is None:
             overlap_ratio = 0
@@ -99,7 +99,7 @@ class FeatureExtractor:
                 file_itterator += 1
                 for chunck in chuncks:
                     chunck = chunck.get_pandas(time=True)
-
+                    #print('Länge der chunks', len(chunck))
                     # sometimes chuncks have length 0 and we need to skip those chuncks
                     if not len(chunck):
                         continue
@@ -121,5 +121,19 @@ class FeatureExtractor:
 
         # classify treatment or no treatment
         # if false all types of treatments are considered
-        if target == 'nea_vs_all':
-            self.y[self.y.values != 'nea'] = 'treat'
+        if target == 'sal_vs_all':
+            self.y[self.y.values != 'sal'] = 'treat'
+        elif target == 'eth_vs_sal':
+            drop_vals = (self.y == 'sal') | (self.y == 'eth')
+            self.y = self.y[drop_vals]
+            self.collected_data = self.collected_data[self.collected_data['id'].isin(drop_vals[drop_vals.values].index)]
+        elif target == 'glu_vs_sal':
+            drop_vals = (self.y == 'sal') | (self.y == 'glu')
+            self.y = self.y[drop_vals]
+            self.collected_data = self.collected_data[self.collected_data['id'].isin(drop_vals[drop_vals.values].index)]
+        elif target == 'nea_vs_sal':
+            drop_vals = (self.y == 'sal') | (self.y == 'nea')
+            self.y = self.y[drop_vals]
+            self.collected_data = self.collected_data[self.collected_data['id'].isin(drop_vals[drop_vals.values].index)]
+
+

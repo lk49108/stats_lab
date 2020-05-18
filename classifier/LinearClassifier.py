@@ -124,7 +124,9 @@ class LinearClassifier:
 
         if "predicted_y_confidence" in out_df:
             y_pred_confidence = out_df["predicted_y_confidence"]
-            auc_score = roc_auc_score(y_true, y_pred_confidence)
+
+            #auc_score = roc_auc_score(y_true, y_pred_confidence)
+            auc_score = 'not yet computable'
             fpr, tpr, thresholds = roc_curve(y_true, y_pred_confidence, pos_label=2)
             return accuracy, auc_score
 

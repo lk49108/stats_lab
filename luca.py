@@ -31,23 +31,28 @@ if __name__=='__main__':
     #set target to treatment to check if we actually predict the nea vs all correctly
     #skipping id 168, 170 they said its messed up data for the brain
     #TODO check all mice for messed up data, maybe in R check all histograms.
-    mice_ids = {126, 165, 166, 167, 299, 302, 303, 306, 307, 323, 327}
-    validation_mice = {165, 307, 327}
-    training_mice = {166, 170, 299, 306}
+    mice_ids = {126, 165, 166, 167, 168, 299, 302, 303, 306, 307, 323, 327}
+    validation_mice = {167,165}
+    #training_mice = {165, 166, 170}
 
     #target arguments: use 'nea_vs_all' or 'all_vs_all'
     #for few training mice set part_last to 10 mins, for all training mice, set part last to 20
     #TODO only to feature selection over the training data and remember the names
     #TODO read features from saved format
-
+    #sal_vs_all
+    #eth_vs_sal
+    #glu_vs_sal
+    #nea_vs_sal
     # as signal choose either the running or brain_signal
+    target = "eth_vs_sal"
+    overlap = 0.9
     train_feature_generator = feature_generator.FeatureExtractor(md, signal_type='brain_signal', brain_half='right',
-                                                           mouse_ids=mice_ids-validation_mice, slice_min=35, target='all_vs_all',
-                                                           part_last=15, slice_end = 55, overlap_ratio = 0.9)
+                                                           mouse_ids=mice_ids-validation_mice, slice_min=35, target=target,
+                                                           part_last=15, slice_end = 55, overlap_ratio = overlap)
 
     test_feature_generator = feature_generator.FeatureExtractor(md, signal_type='brain_signal', brain_half='right',
-                                                           mouse_ids=validation_mice, slice_min=35, target='all_vs_all',
-                                                           part_last=15, slice_end = 55, overlap_ratio = 0.9)
+                                                           mouse_ids=validation_mice, slice_min=35, target=target,
+                                                           part_last=15, slice_end = 55, overlap_ratio = overlap)
 
     recompute_features = True
     if recompute_features:
@@ -63,16 +68,20 @@ if __name__=='__main__':
         relevant_test_features = test_feature_generator.getFeatures(feature_dict=relevant_fc_parameters)
 
         feature_block = relevant_train_features.append(relevant_test_features)
-        feature_block.to_csv('features.csv')
+        feature_block.to_csv('features.csv', index=False, header=False)
     else:
-        feature_block = pd.read_csv('features.csv')
+        feature_block = pd.read_csv('features.csv', header=True, index=True)
 
     #validation features
     print('Feature Values:\n', feature_block)
 
     #print(feature_block.columns)
-    classifier = LC.LinearClassifier(feature_block,model_type='svm', C_val = 1000)
+    classifier = LC.LinearClassifier(feature_block,model_type='logistic', C_val = 2)
 
     # splittype either 'subject' or 'ratio' with percentages of whole data
     classifier.classify(train_test={'split_type': 'subject', 'train': list(mice_ids-validation_mice), 'test' : list(validation_mice)})
     classifier.classify(train_test={'split_type': 'ratio', 'train': 0.7, 'test': 0.3})
+
+    ##Visualization
+    feature_data = featureDataPreparation(md, chunk_duration=10, signal_type='brain_signal')
+    plotFeatures(feature_data)
