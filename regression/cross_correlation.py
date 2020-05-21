@@ -24,7 +24,7 @@ df_anova_r = pd.DataFrame(columns = ['R','Treatment'])
 df_anova_off = pd.DataFrame(columns = ['Offset','Treatment'])
 
 mouse_ids_list = [165, 166, 167, 168, 126, 170, 299, 302, 303, 306, 307, 323, 327]
-mouse_ids = mouse_ids_list[0:1] #(to select all mice use [0:12])
+mouse_ids = mouse_ids_list[0:1] #(to select all mice use [0:13])
 window = 200 #for moving correlation plot
 
 def crosscorr(datax, datay, method, lag=0, wrap=False):
@@ -127,9 +127,9 @@ lower = 30
 upper = 90
 
 #Parameters
-option_plot_crosscorr = False
+option_plot_crosscorr = True
 corr_method = 'spearman' #pearson (for linear relationship); spearman for monotone relationship (direction matters)
-option_moving_correlation = True
+option_moving_correlation = False
 
 
 #We loop through all mice and treatments to get two columns: Pearson R and the respective treatment
