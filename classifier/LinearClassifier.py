@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import StratifiedKFold, train_test_split, StratifiedShuffleSplit
 from sklearn.preprocessing import scale
-from sklearn.metrics import confusion_matrix, balanced_accuracy_score, plot_confusion_matrix, roc_auc_score, roc_curve
+from sklearn.metrics import confusion_matrix, balanced_accuracy_score, plot_confusion_matrix, f1_score, roc_curve, accuracy_score
 import matplotlib.pyplot as plt
 from sklearn.utils.class_weight import compute_sample_weight
 from sklearn import preprocessing
@@ -97,6 +97,7 @@ class LinearClassifier:
         y_out = self.fit.predict(X_test)
         y_out_confidence = self.fit.decision_function(X_test)
         y_out_confidence = 1/(1+np.exp(-y_out_confidence))
+        #print(self.fit.predict_proba(X_test))
 
         if plot:
             plot_confusion_matrix(self.fit, X_test, y_test, display_labels = ['eth', 'glu', 'nea', 'sal']) #, normalize='true'
@@ -108,14 +109,16 @@ class LinearClassifier:
             acc_score, auc_score = self.accuracy(out_df)
             print(out_df)
             print("The accuracy score is: ", acc_score)
-            print("The AUC score is: ", auc_score)
+            #print("The AUC score is: ", auc_score)
+            return acc_score
         else:
             out_df = pd.DataFrame({'real_y': y_test, 'predicted_y': y_out})
             acc_score  = self.accuracy(out_df)
             print(out_df)
             print("The accuracy score is: ", acc_score)
 
-            return acc_score, confusion_matrix(y_test, y_out, labels = ['eth', 'glu', 'nea', 'sal'])
+            return acc_score
+            #, confusion_matrix(y_test, y_out, labels = ['eth', 'glu', 'nea', 'sal'])
 
     def accuracy(self, out_df):
         y_pred = out_df["predicted_y"]
