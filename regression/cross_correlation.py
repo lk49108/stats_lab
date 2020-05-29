@@ -25,7 +25,7 @@ import scipy.stats as stats
 from statsmodels.graphics.gofplots import qqplot
 
 #First we want to fetch the relevant data which includes the brain and running activity
-mice_data_dir = r'C:\Users\Massimo\Documents\StatsLab\New Data'
+mice_data_dir = r'C:\Users\Massimo\Documents\StatsLab\New Data' #indicate here the directory where your .csv files of mouse data lie (use "r" in front of path in case you use "\" for path)
 md = mice_data.MiceDataMerger(mice_data_dir)
 treatments = ['glu', 'eth', 'sal', 'nea']
 signals = ['brain_signal', 'running', 'v_o2', 'v_co2', 'rq', 'heat']
@@ -33,7 +33,7 @@ df_anova_r = pd.DataFrame(columns = ['R','Treatment'])
 df_anova_lag = pd.DataFrame(columns = ['Lag','Treatment'])
 
 
-#All relevant functions
+#Functions
 def crosscorr(datax, datay, method, lag=0, wrap=False):
     """ Lag-N cross correlation.
     Shifted data filled with NaNs
@@ -152,8 +152,9 @@ mouse_ids = mouse_ids_list[0:2] #(to select all mice use [0:14])
 
 
 #We loop through all mice and treatments combinations
+#We use a nested structure to cover the following cases:
 #If there is no data available, the loop returns a None argument, which leads to an error
-#If there are multiple subjects (e.g. multiple observations for 165) then the loop returns a
+#If there are multiple subjects (e.g. multiple observations for 165) then the loop returns a list
 for j in range(len(mouse_ids)):
     for i in range(len(treatments)):
         brain_signal = md.fetch_mouse_signal(mouse_id = mouse_ids[j], treat=treatments[i], signal='brain_signal')
@@ -187,7 +188,7 @@ for j in range(len(mouse_ids)):
                                       'Treatment': [treatments[i]]}))
 
         else:
-            print(mouse_ids[j], treatments[i])
+            print(mouse_ids[j], treatments[i]) #we print all the subject/treatment combinations that are not covered
 
         if option_moving_correlation:
             # Visualization of data
