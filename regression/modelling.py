@@ -24,11 +24,6 @@ treatments = ['glu', 'eth', 'sal', 'nea']
 signals = ['brain_signal', 'running', 'v_o2', 'v_co2', 'rq', 'heat']
 
 #Functions
-def shift(df):
-    # We want to shift the brain signal into the set of real positive numbers to make
-    # the times series regression more coherent
-    df_shifted = df + 3 #+3 determined by visual inspection
-    return df_shifted
 def get_relevant_features(brain, running):
 
     #We remove first the NaNs created through the shift of the time series
@@ -128,7 +123,7 @@ lst_values_CV = []
 
 #Select which mice you want to loop through
 mouse_ids_list = [126, 165, 166, 167, 168, 170, 176, 218, 223, 302, 303, 306, 307, 327]
-mouse_ids = mouse_ids_list[0:1] #(to select all mice use [0:14])
+mouse_ids = mouse_ids_list[0:14] #(to select all mice use [0:14])
 
 
 #We loop through all mice and treatments combinations
@@ -145,7 +140,6 @@ for j in range(len(mouse_ids)):
             if type(brain_signal) is not list and type(running_signal) is not list:
 
                 brain = preprocessing(brain_signal, lower, upper)
-                brain = shift(brain)
                 brain = create_features(brain, feature_shift)
                 running = preprocessing(running_signal, lower, upper)
                 running_bin = binarize(X=running, threshold= running_cutoff, copy=True)
@@ -163,7 +157,6 @@ for j in range(len(mouse_ids)):
             elif type(brain_signal) is list and type(running_signal) is list:
                 for m in range(len(brain_signal)):
                     brain = preprocessing(brain_signal[m], lower, upper)
-                    brain = shift(brain)
                     brain = create_features(brain, feature_shift)
 
                     running = preprocessing(running_signal[m], lower, upper)

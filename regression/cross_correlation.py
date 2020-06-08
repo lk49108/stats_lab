@@ -31,6 +31,7 @@ treatments = ['glu', 'eth', 'sal', 'nea']
 signals = ['brain_signal', 'running', 'v_o2', 'v_co2', 'rq', 'heat']
 df_anova_r = pd.DataFrame(columns = ['R','Treatment'])
 df_anova_lag = pd.DataFrame(columns = ['Lag','Treatment'])
+window = 200
 
 
 #Functions
@@ -135,8 +136,8 @@ upper = 90
 
 #Options:
 hemisphere = 0 #put 0 for left brain hemisphere, put 1 for right brain hemisphere
-option_plot_crosscorr = False #set True if you want to plot the Cross-Correlation plot for each subject/treatment combination
-option_moving_correlation = False #set True if you want to plot the moving correlation
+option_plot_crosscorr = False  #set True if you want to plot the Cross-Correlation plot for each subject/treatment combination
+option_moving_correlation = True  #set True if you want to plot the moving correlation
 #Attention: Calculating the moving correlation does take quite some time
 
 window = 200 #for moving correlation plot
@@ -148,7 +149,7 @@ option_boxplots = True #set true if you want to plot the boxplot for the differe
 
 #Select which mice you want to loop through
 mouse_ids_list = [126, 165, 166, 167, 168, 170, 176, 218, 223, 302, 303, 306, 307, 327]
-mouse_ids = mouse_ids_list[0:2] #(to select all mice use [0:14])
+mouse_ids = mouse_ids_list[0:1] #(to select all mice use [0:14])
 
 
 #We loop through all mice and treatments combinations
