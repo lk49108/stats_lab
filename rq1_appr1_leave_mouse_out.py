@@ -1,3 +1,7 @@
+# RQ1 Approach 1
+# This file was used to compute the accuracy table seen in the final presentation
+# Here we perform a leave-one-mouse-out cross-validation
+
 import data_scheduler.lib_data_merger as mice_data
 import feature_generator.FeatureExtraction as feature_generator
 from tsfresh.feature_extraction.settings import EfficientFCParameters, ComprehensiveFCParameters
@@ -6,9 +10,12 @@ import numpy as np
 import pandas as pd
 
 if __name__=='__main__':
+    #change path!
     mice_data_dir = r'/Users/lucadisse/ETH/Master/FS20/StatsLab/exclude'
     md = mice_data.MiceDataMerger(mice_data_dir)
 
+    # we can only consider mice sets that actually contain the desired treatments
+    # here we removed measurements that contained the same treatment a mice mulitiple times
     nea_mice = {165, 166, 167, 168, 176, 218, 299, 302, 303, 306, 307, 327}
     glu_mice = {165, 166, 167, 168, 170, 306, 307}
     sal_mice = {126, 165, 166, 167, 168, 170, 176, 218, 302, 303, 306, 323}
@@ -55,4 +62,4 @@ if __name__=='__main__':
 
 
     all_scores = np.sum(acc_vals, axis=1)
-    print('Hier sind all sum of scores: ', all_scores)
+    print('Average accuracy scores: ', all_scores)

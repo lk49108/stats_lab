@@ -63,6 +63,7 @@ class FeatureExtractor:
     def relevantFeatures(self, feature_dict):
         features_filtered_direct = extract_relevant_features(self.collected_data, y = self.y, column_id='id', column_sort='time_min',
                                                              column_value= self.column_value, default_fc_parameters=feature_dict)
+        # the false discovery rate can be adjusted with the additional argument: fdr_level = 0.05 (default)
         relevant_fc_parameters = from_columns(features_filtered_direct)
         print('Identified ', len(features_filtered_direct.columns), ' relevant features.')
         features_filtered_direct['target_class'] = self.y
@@ -121,9 +122,7 @@ class FeatureExtractor:
         # hand to target y the class we want to predict, should not contain sample ids
         self.y = pd.Series(index=target_map, data=target_y)
 
-        # classify treatment or no treatment
-        # if false all types of treatments are considered
-
+        # adjusting the label vector y for the desired testing
         if target == 'sal_vs_all':
             self.y[list((self.y.values != 'sal'))] = 'treat'
         elif target == 'eth_vs_sal':
