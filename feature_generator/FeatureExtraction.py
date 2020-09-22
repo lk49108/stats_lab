@@ -14,17 +14,17 @@ class FeatureExtractor:
     fc_parameters = {}
     mouse_data = []
     y = pd.Series()
-    collected_data = pd.DataFrame()
 
     def __init__(self, feature_dict, md, signal_type, brain_half = 'left', mouse_ids={165, 166}, slices={'eth':(35,70), 'glu':(30,50), 'nea':(30,70), 'sal':(30,70)},
                  target="treatment", part_last=10, equal_length = True, overlap_ratio = 0):
+        self.collected_data = pd.DataFrame()
         self.fc_parameters = feature_dict
         self.slices = slices
         self.mouse_data = md
         self.signal_type = signal_type
         self.mouse_ids = mouse_ids
         self.chunk_duration = part_last
-        self.mice_treat_file_ids, self.chunk_ids = set(), None
+        self.mice_treat_file_ids, self.chunk_ids, self.chunk_start = set(), None, None
         self.data_preparation(signal_type, target, part_last, equal_length, overlap_ratio)
         if signal_type == 'brain_signal' and brain_half == 'right':
             column_value = self.mouse_data.col_names[self.signal_type][2]
@@ -44,6 +44,7 @@ class FeatureExtractor:
         extracted_features.selection_type = 'all'
         extracted_features['target_class'] = self.y
         extracted_features['chunk_id'] = self.chunk_ids
+        extracted_features['time_min'] = self.chunk_start
         return extracted_features
 
     def getFeatures2(self, target_class = False):
@@ -81,6 +82,7 @@ class FeatureExtractor:
         file_id = []
         previous_ids = set()
         chunk_ids = []
+        chunk_start = []
         for j in mouse_map:
             data_gen = self.mouse_data.fetch_mouse_signal(j[0], j[1], signal_type)
             if data_gen is None:
@@ -116,10 +118,12 @@ class FeatureExtractor:
                     self.collected_data = pd.concat([self.collected_data, chunck], axis=0)
                     target_map.append(id[1])
                     target_y.append(str(j[1]))
+                    chunk_start.append(chunck['time_min'].iloc[0])
 
         # hand to target y the class we want to predict, should not contain sample ids
         self.y = pd.Series(index=target_map, data=target_y)
         self.chunk_ids = pd.Series(index=target_map, data = chunk_ids)
+        self.chunk_start = chunk_start
         # classify treatment or no treatment
         # if false all types of treatments are considered
         if target == 'nea_vs_all':
